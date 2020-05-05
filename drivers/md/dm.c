@@ -1017,6 +1017,9 @@ static void clone_endio(struct bio *bio)
 			disable_write_zeroes(md);
 	}
 
+	if (error)
+		atomic_inc(&md->ioerr_cnt);
+
 	if (endio) {
 		int r = endio(tio->ti, bio, &error);
 		switch (r) {
@@ -1304,6 +1307,7 @@ static blk_qc_t __map_bio(struct dm_target_io *tio)
 		break;
 	case DM_MAPIO_KILL:
 		free_tio(tio);
+		atomic_inc(&md->ioerr_cnt);
 		dec_pending(io, BLK_STS_IOERR);
 		break;
 	case DM_MAPIO_REQUEUE:
@@ -2014,6 +2018,7 @@ static struct mapped_device *alloc_dev(int minor)
 		goto bad;
 
 	dm_stats_init(&md->stats);
+	atomic_set(&md->ioerr_cnt, 0);
 
 	/* Populate the mapping, nobody knows we exist yet */
 	spin_lock(&_minor_lock);
@@ -2991,6 +2996,11 @@ int dm_noflush_suspending(struct dm_target *ti)
 	return __noflush_suspending(dm_table_get_md(ti->table));
 }
 EXPORT_SYMBOL_GPL(dm_noflush_suspending);
+
+int dm_ioerr_cnt(struct mapped_device *md)
+{
+	return atomic_read(&md->ioerr_cnt);
+}
 
 struct dm_md_mempools *dm_alloc_md_mempools(struct mapped_device *md, enum dm_queue_mode type,
 					    unsigned integrity, unsigned per_io_data_size,

@@ -108,6 +108,8 @@ struct mapped_device {
 
 	struct dm_stats stats;
 
+	atomic_t ioerr_cnt;
+
 	/* for blk-mq request-based DM support */
 	struct blk_mq_tag_set *tag_set;
 	bool init_tio_pdu:1;

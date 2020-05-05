@@ -82,6 +82,7 @@ void dm_unlock_md_type(struct mapped_device *md);
 void dm_set_md_type(struct mapped_device *md, enum dm_queue_mode type);
 enum dm_queue_mode dm_get_md_type(struct mapped_device *md);
 struct target_type *dm_get_immutable_target_type(struct mapped_device *md);
+int dm_ioerr_cnt(struct mapped_device *md);
 
 int dm_setup_md_queue(struct mapped_device *md, struct dm_table *t);
 

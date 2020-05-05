@@ -171,6 +171,8 @@ static void dm_end_request(struct request *clone, blk_status_t error)
 	tio->ti->type->release_clone_rq(clone, NULL);
 
 	rq_end_stats(md, rq);
+	if (error)
+		atomic_inc(&md->ioerr_cnt);
 	blk_mq_end_request(rq, error);
 	rq_completed(md);
 }
@@ -268,6 +270,8 @@ static void dm_softirq_done(struct request *rq)
 		struct mapped_device *md = tio->md;
 
 		rq_end_stats(md, rq);
+		if (tio->error)
+			atomic_inc(&md->ioerr_cnt);
 		blk_mq_end_request(rq, tio->error);
 		rq_completed(md);
 		return;

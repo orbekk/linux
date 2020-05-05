@@ -74,6 +74,12 @@ static ssize_t dm_attr_name_show(struct mapped_device *md, char *buf)
 	return strlen(buf);
 }
 
+static ssize_t dm_attr_ioerr_cnt_show(struct mapped_device *md, char *buf)
+{
+	sprintf(buf, "%d\n", dm_ioerr_cnt(md));
+	return strlen(buf);
+}
+
 static ssize_t dm_attr_uuid_show(struct mapped_device *md, char *buf)
 {
 	if (dm_copy_name_and_uuid(md, NULL, buf))
@@ -99,6 +105,7 @@ static ssize_t dm_attr_use_blk_mq_show(struct mapped_device *md, char *buf)
 }
 
 static DM_ATTR_RO(name);
+static DM_ATTR_RO(ioerr_cnt);
 static DM_ATTR_RO(uuid);
 static DM_ATTR_RO(suspended);
 static DM_ATTR_RO(use_blk_mq);
@@ -106,6 +113,7 @@ static DM_ATTR_RW(rq_based_seq_io_merge_deadline);
 
 static struct attribute *dm_attrs[] = {
 	&dm_attr_name.attr,
+	&dm_attr_ioerr_cnt.attr,
 	&dm_attr_uuid.attr,
 	&dm_attr_suspended.attr,
 	&dm_attr_use_blk_mq.attr,

@@ -220,6 +220,9 @@ struct gendisk {
 	int node_id;
 	struct badblocks *bb;
 	struct lockdep_map lockdep_map;
+#ifdef CONFIG_BPF_IO_FILTER
+	struct bpf_prog *prog;
+#endif
 };
 
 static inline struct gendisk *part_to_disk(struct hd_struct *part)

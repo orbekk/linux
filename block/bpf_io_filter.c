@@ -104,10 +104,52 @@ const struct bpf_verifier_ops io_filter_verifier_ops = {
 
 int io_filter_prog_attach(const union bpf_attr *attr, struct bpf_prog *prog)
 {
+	struct gendisk *disk;
+	struct fd f;
+
+	if (attr->attach_flags)
+		return -EINVAL;
+
+	f = fdget(attr->target_fd);
+	if (!f.file)
+		return -EBADF;
+
+	disk  = I_BDEV(f.file->f_mapping->host)->bd_disk;
+	if (disk == NULL)
+		return -ENXIO;
+
+	//TODO: change to array of programs to allow multiple programs to attach
+	rcu_assign_pointer(disk->prog, prog);
+
 	return 0;
 }
 
 int io_filter_prog_detach(const union bpf_attr *attr)
 {
+	struct bpf_prog *prog;
+	struct gendisk *disk;
+	struct fd f;
+
+	if (attr->attach_flags)
+		return -EINVAL;
+
+	prog = bpf_prog_get_type(attr->attach_bpf_fd,
+				 BPF_PROG_TYPE_IO_FILTER);
+
+	if (IS_ERR(prog))
+		return PTR_ERR(prog);
+
+	f = fdget(attr->target_fd);
+	if (!f.file)
+		return -EBADF;
+
+	disk  = I_BDEV(f.file->f_mapping->host)->bd_disk;
+	if (disk == NULL)
+		return -ENXIO;
+
+	rcu_assign_pointer(disk->prog, NULL);
+
+	bpf_prog_put(prog);
+
 	return 0;
 }

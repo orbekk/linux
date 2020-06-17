@@ -9,7 +9,10 @@
 #include <linux/bpf_verifier.h>
 #include <linux/kobject.h>
 #include <linux/sysfs.h>
+#include <linux/genhd.h>
 #include <uapi/linux/bpf.h>
+
+#include "blk-bpf-io-filter.h"
 
 /*
 Need to build this out such that all, but only, necessary functions are
@@ -152,4 +155,18 @@ int io_filter_prog_detach(const union bpf_attr *attr)
 	bpf_prog_put(prog);
 
 	return 0;
+}
+
+int io_filter_bpf_run(struct bio *bio)
+{
+	struct bpf_prog *prog;
+	int ret = 0;
+
+	rcu_read_lock();
+	prog = rcu_dereference(bio->bi_disk->prog);
+	if (prog)
+		ret = BPF_PROG_RUN(prog, bio);
+	rcu_read_unlock();
+
+	return ret;       /* allow io by default */
 }

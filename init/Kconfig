@@ -1610,6 +1610,14 @@ config KALLSYMS_BASE_RELATIVE
 
 # syscall, maps, verifier
 
+config BPF_IO_FILTER
+	bool "Instrumentation of block io filtering subsystem with BPF"
+	depends on BPF_EVENTS
+	depends on BPF_SYSCALL
+	help
+	  Enables instrumentation of the hooks in block subystem with eBPF
+	  programs for observing and filtering io.
+
 config BPF_LSM
 	bool "LSM Instrumentation with BPF"
 	depends on BPF_EVENTS

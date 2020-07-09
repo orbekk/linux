@@ -47,6 +47,7 @@
 #include "blk-mq-sched.h"
 #include "blk-pm.h"
 #include "blk-rq-qos.h"
+#include "blk-bpf-io-filter.h"
 
 #ifdef CONFIG_DEBUG_FS
 struct dentry *blk_debugfs_root;
@@ -875,6 +876,7 @@ static noinline_for_stack bool
 generic_make_request_checks(struct bio *bio)
 {
 	struct request_queue *q;
+	int ret;
 	int nr_sectors = bio_sectors(bio);
 	blk_status_t status = BLK_STS_IOERR;
 	char b[BDEVNAME_SIZE];
@@ -923,6 +925,10 @@ generic_make_request_checks(struct bio *bio)
 			goto end_io;
 		}
 	}
+
+	ret = io_filter_bpf_run(bio);
+	if (io_filter_bpf_run(bio))
+		goto end_io;
 
 	if (!test_bit(QUEUE_FLAG_POLL, &q->queue_flags))
 		bio->bi_opf &= ~REQ_HIPRI;

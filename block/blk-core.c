@@ -876,7 +876,6 @@ static noinline_for_stack bool
 generic_make_request_checks(struct bio *bio)
 {
 	struct request_queue *q;
-	int ret;
 	int nr_sectors = bio_sectors(bio);
 	blk_status_t status = BLK_STS_IOERR;
 	char b[BDEVNAME_SIZE];
@@ -929,8 +928,7 @@ generic_make_request_checks(struct bio *bio)
 		}
 	}
 
-	ret = io_filter_bpf_run(bio);
-	if (io_filter_bpf_run(bio))
+	if (!io_filter_bpf_run(bio))
 		goto end_io;
 
 	if (!test_bit(QUEUE_FLAG_POLL, &q->queue_flags))

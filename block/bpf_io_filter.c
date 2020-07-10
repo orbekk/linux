@@ -14,6 +14,9 @@
 
 #include "blk-bpf-io-filter.h"
 
+#define io_filter_rcu_dereference_progs(disk)	\
+	rcu_dereference_protected(disk->progs, lockdep_is_held(&disk->io_filter_lock))
+
 /*
 Need to build this out such that all, but only, necessary functions are
 allowed.
@@ -104,11 +107,15 @@ const struct bpf_verifier_ops io_filter_verifier_ops = {
 	.is_valid_access = btf_ctx_access,
 };
 
+#define BPF_MAX_PROGS 64
 
 int io_filter_prog_attach(const union bpf_attr *attr, struct bpf_prog *prog)
 {
 	struct gendisk *disk;
 	struct fd f;
+	struct bpf_prog_array *old_array;
+	struct bpf_prog_array *new_array;
+	int ret;
 
 	if (attr->attach_flags)
 		return -EINVAL;
@@ -121,10 +128,26 @@ int io_filter_prog_attach(const union bpf_attr *attr, struct bpf_prog *prog)
 	if (disk == NULL)
 		return -ENXIO;
 
-	//TODO: change to array of programs to allow multiple programs to attach
-	rcu_assign_pointer(disk->prog, prog);
+	ret = mutex_lock_interruptible(&disk->io_filter_lock);
+	if (ret)
+		return ret;
 
-	return 0;
+	old_array = io_filter_rcu_dereference_progs(disk);
+	if (old_array && bpf_prog_array_length(old_array) >= BPF_MAX_PROGS) {
+		ret = -E2BIG;
+		goto unlock;
+	}
+
+	ret = bpf_prog_array_copy(old_array, NULL, prog, &new_array);
+	if (ret < 0)
+		goto unlock;
+
+	rcu_assign_pointer(disk->progs, new_array);
+	bpf_prog_array_free(old_array);
+
+unlock:
+	mutex_unlock(&disk->io_filter_lock);
+	return ret;
 }
 
 int io_filter_prog_detach(const union bpf_attr *attr)
@@ -132,10 +155,14 @@ int io_filter_prog_detach(const union bpf_attr *attr)
 	struct bpf_prog *prog;
 	struct gendisk *disk;
 	struct fd f;
+	struct bpf_prog_array *old_array;
+	struct bpf_prog_array *new_array;
+	int ret;
 
 	if (attr->attach_flags)
 		return -EINVAL;
 
+	/* increments prog refcnt */
 	prog = bpf_prog_get_type(attr->attach_bpf_fd,
 				 BPF_PROG_TYPE_IO_FILTER);
 
@@ -143,30 +170,54 @@ int io_filter_prog_detach(const union bpf_attr *attr)
 		return PTR_ERR(prog);
 
 	f = fdget(attr->target_fd);
-	if (!f.file)
-		return -EBADF;
+	if (!f.file) {
+		ret = -EBADF;
+		goto put;
+	}
 
 	disk  = I_BDEV(f.file->f_mapping->host)->bd_disk;
-	if (disk == NULL)
-		return -ENXIO;
+	if (disk == NULL) {
+		ret = -ENXIO;
+		goto put;
+	}
 
-	rcu_assign_pointer(disk->prog, NULL);
+	ret = mutex_lock_interruptible(&disk->io_filter_lock);
+	if (ret)
+		goto put;
 
-	bpf_prog_put(prog);
+	old_array = io_filter_rcu_dereference_progs(disk);
+	ret = bpf_prog_array_copy(old_array, prog, NULL, &new_array);
+	if (ret)
+		goto unlock;
 
-	return 0;
+	rcu_assign_pointer(disk->progs, new_array);
+	bpf_prog_array_free(old_array);
+	bpf_prog_put(prog);	/* put for detaching of program from dev */
+
+unlock:
+	mutex_unlock(&disk->io_filter_lock);
+put:
+	bpf_prog_put(prog);	/* put for bpf_prog_get_type */
+	return ret;
 }
 
 int io_filter_bpf_run(struct bio *bio)
 {
-	struct bpf_prog *prog;
-	int ret = 0;
+	/* allow io by default */
+	return BPF_PROG_RUN_ARRAY_CHECK(bio->bi_disk->progs, bio, BPF_PROG_RUN);
+}
 
-	rcu_read_lock();
-	prog = rcu_dereference(bio->bi_disk->prog);
-	if (prog)
-		ret = BPF_PROG_RUN(prog, bio);
-	rcu_read_unlock();
+void io_filter_bpf_free(struct gendisk *disk)
+{
+	struct bpf_prog_array_item *item;
+	struct bpf_prog_array *array;
 
-	return ret;       /* allow io by default */
+	array = io_filter_rcu_dereference_progs(disk);
+	if (!array)
+		return;
+
+	for (item = array->items; item->prog; item++)
+		bpf_prog_put(item->prog);
+
+	bpf_prog_array_free(array);
 }

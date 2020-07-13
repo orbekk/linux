@@ -81,6 +81,7 @@ static const char * const prog_type_name[] = {
 	[BPF_PROG_TYPE_TRACING]			= "tracing",
 	[BPF_PROG_TYPE_STRUCT_OPS]		= "struct_ops",
 	[BPF_PROG_TYPE_EXT]			= "ext",
+	[BPF_PROG_TYPE_IO_FILTER]		= "io_filter",
 };
 
 extern const char * const map_type_name[];

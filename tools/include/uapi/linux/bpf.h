@@ -3951,4 +3951,13 @@ struct bpf_pidns_info {
 	__u32 pid;
 	__u32 tgid;
 };
+
+#define IO_ALLOW 1
+#define IO_BLOCK 0
+
+struct bpf_io_request {
+	__u64 sector_start;     /* first sector */
+	__u32 sector_cnt;       /* number of sectors */
+	__u32 opf;              /* bio->bi_opf */
+};
 #endif /* _UAPI__LINUX_BPF_H__ */

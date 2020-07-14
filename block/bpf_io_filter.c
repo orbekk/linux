@@ -3,14 +3,13 @@
 #include <linux/bpf.h>
 #include <linux/bpf_trace.h>
 #include <linux/filter.h>
-#include <linux/btf.h>
-#include <linux/filter.h>
 #include <linux/kallsyms.h>
 #include <linux/bpf_verifier.h>
 #include <linux/kobject.h>
 #include <linux/sysfs.h>
 #include <linux/genhd.h>
 #include <uapi/linux/bpf.h>
+#include <linux/bio.h>
 
 #include "blk-bpf-io-filter.h"
 
@@ -46,9 +45,38 @@ io_filter_func_proto(enum bpf_func_id func_id, const struct bpf_prog *prog)
 const struct bpf_prog_ops io_filter_prog_ops = {
 };
 
+static bool io_filter_is_valid_access(int off, int size,
+				      enum bpf_access_type type,
+				      const struct bpf_prog *prog,
+				      struct bpf_insn_access_aux *info)
+{
+	const __u32 size_default = sizeof(__u32);
+
+	if (type != BPF_READ)
+		return false;
+
+	if (off < 0 || off >= offsetofend(struct bpf_io_request, opf))
+		return false;
+
+	if (off % size != 0)
+		return false;
+
+	switch(off) {
+	case offsetof(struct bpf_io_request, sector_start):
+		return size == sizeof(__u64);
+	case offsetof(struct bpf_io_request, sector_cnt):
+		return size == sizeof(__u32);
+	case bpf_ctx_range(struct bpf_io_request, opf):
+		bpf_ctx_record_field_size(info, size_default);
+		return bpf_ctx_narrow_access_ok(off, size, size_default);
+	default:
+		return false;
+	}
+}
+
 const struct bpf_verifier_ops io_filter_verifier_ops = {
 	.get_func_proto = io_filter_func_proto,
-	.is_valid_access = btf_ctx_access,
+	.is_valid_access = io_filter_is_valid_access,
 };
 
 #define BPF_MAX_PROGS 64
@@ -147,8 +175,14 @@ put:
 
 int io_filter_bpf_run(struct bio *bio)
 {
+	struct bpf_io_request io_req = {
+		.sector_start = bio->bi_iter.bi_sector,
+		.sector_cnt = bio_sectors(bio),
+		.opf = bio->bi_opf,
+	};
+
 	/* allow io by default */
-	return BPF_PROG_RUN_ARRAY_CHECK(bio->bi_disk->progs, bio, BPF_PROG_RUN);
+	return BPF_PROG_RUN_ARRAY_CHECK(bio->bi_disk->progs, &io_req, BPF_PROG_RUN);
 }
 
 void io_filter_bpf_free(struct gendisk *disk)

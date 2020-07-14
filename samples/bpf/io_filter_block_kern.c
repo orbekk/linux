@@ -5,8 +5,8 @@
 char _license[] SEC("license") = "GPL";
 
 SEC("io_filter")
-int filter_io(struct bio *b)
+int filter_io(struct bpf_io_request *io_req)
 {
-	return 0;
+	return IO_BLOCK;
 }
 

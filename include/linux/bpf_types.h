@@ -48,6 +48,8 @@ BPF_PROG_TYPE(BPF_PROG_TYPE_RAW_TRACEPOINT_WRITABLE, raw_tracepoint_writable,
 	      struct bpf_raw_tracepoint_args, u64)
 BPF_PROG_TYPE(BPF_PROG_TYPE_TRACING, tracing,
 	      void *, void *)
+#endif
+#ifdef CONFIG_BPF_IO_FILTER
 BPF_PROG_TYPE(BPF_PROG_TYPE_IO_FILTER, io_filter,
 	      struct bpf_io_request, struct bpf_io_request)
 #endif

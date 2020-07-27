@@ -49,7 +49,7 @@ BPF_PROG_TYPE(BPF_PROG_TYPE_RAW_TRACEPOINT_WRITABLE, raw_tracepoint_writable,
 BPF_PROG_TYPE(BPF_PROG_TYPE_TRACING, tracing,
 	      void *, void *)
 BPF_PROG_TYPE(BPF_PROG_TYPE_IO_FILTER, io_filter,
-	      void *, struct bio)
+	      struct bpf_io_request, struct bpf_io_request)
 #endif
 #ifdef CONFIG_CGROUP_BPF
 BPF_PROG_TYPE(BPF_PROG_TYPE_CGROUP_DEVICE, cg_dev,

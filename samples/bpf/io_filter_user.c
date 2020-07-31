@@ -30,6 +30,11 @@ int main(int argc, char **argv)
 	ret = bpf_prog_load(filename,
 			    BPF_PROG_TYPE_IO_FILTER, &obj, &progfd);
 
+	if (ret) {
+		printf("Failed to load program\n");
+		return 1;
+	}
+
 	printf("Loaded io_filter program successfully.\n");
 
 	devfd = open(argv[1], O_RDONLY);
@@ -39,21 +44,26 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
+	fd = open(argv[2], O_WRONLY|O_CREAT|O_TRUNC, 0666);
+
+	if (fd == -1) {
+		printf("Failed to create test file %s\n", argv[2]);
+		close(devfd);
+		return 1;
+	}
+
+	printf("Opened file \"%s\" successfully.\n", argv[2]);
+
 	ret = bpf_prog_attach(progfd, devfd, BPF_BIO_SUBMIT, 0);
 
 	if (ret) {
 		printf("Failed to attach bpf io_filter program to device: %m\n");
+		close(devfd);
+		close(fd);
 		return 1;
 	}
 
 	printf("Attached bpf io_filter program to device\n");
-
-	fd = open(argv[2], O_WRONLY|O_CREAT|O_TRUNC, 0666);
-
-	if (fd == -1)
-		printf("Failed to create test file %s\n", argv[2]);
-	else
-		printf("Opened file \"%s\" successfully.\n", argv[2]);
 
 	ret = write(fd, "bpf io_filter test write1 ", 26);
 
@@ -73,6 +83,8 @@ int main(int argc, char **argv)
 
 	if (ret) {
 		printf("bpf_prog_detach2: returned %m\n");
+		close(devfd);
+		close(fd);
 		return 1;
 	}
 
@@ -93,6 +105,7 @@ int main(int argc, char **argv)
 		printf("fsync succeeded.\n");
 
 	close(fd);
+	close(devfd);
 
 	read_trace_pipe();
 

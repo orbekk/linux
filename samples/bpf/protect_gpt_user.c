@@ -9,43 +9,15 @@
 #include "bpf_load.h"
 
 /*
- * user program to load bpf program (protect_gpt_kern) to prevent writing to GUID
- * parititon table
+ * user program to load bpf program (protect_gpt_kern) to prevent
+ * writing to GUID parititon table
  *
  * argument 1: device where program will be attached (ie. /dev/sda)
  * argument 2: name for pinned program
  * argument 3: --attach or --detach to attach/detach program
-*/
+ */
 
-int attach(char* dev, char* path);
-int detach(char* dev, char* path);
-void usage(char* exec);
-
-int main(int argc, char **argv)
-{
-	char path[256];
-
-	if (argc != 4){
-		usage(argv[0]);
-		return 1;
-	}
-
-	strcpy(path, "/sys/fs/bpf/");
-	strcat(path, argv[2]);
-
-	if (strcmp(argv[3], "--attach") == 0)
-		return attach(argv[1], path);
-	else if (strcmp(argv[3], "--detach") == 0)
-		return detach(argv[1], path);
-	else {
-		fprintf(stderr, "Error: invalid flag, please specify --attach or --detach");
-		return 1;
-	}
-
-	return 1;
-}
-
-int attach(char* dev, char* path)
+static int attach(char *dev, char *path)
 {
 	struct bpf_object *obj;
 	int ret, devfd, progfd;
@@ -81,7 +53,7 @@ int attach(char* dev, char* path)
 		fprintf(stderr, "Error pinning program: %s\n", strerror(errno));
 		fprintf(stderr, "Detaching program from device\n");
 
-		if(bpf_prog_detach2(progfd, devfd, BPF_BIO_SUBMIT))
+		if (bpf_prog_detach2(progfd, devfd, BPF_BIO_SUBMIT))
 			fprintf(stderr, "Error: failed to detach program\n");
 
 		close(devfd);
@@ -94,7 +66,7 @@ int attach(char* dev, char* path)
 	return 0;
 }
 
-int detach(char* dev, char* path)
+static int detach(char *dev, char *path)
 {
 	int ret, devfd, progfd;
 
@@ -129,9 +101,31 @@ int detach(char* dev, char* path)
 	return 0;
 }
 
-void usage(char* exec)
+static void usage(char *exec)
 {
 	printf("Usage:\n");
 	printf("\t %s <device> <prog name> --attach\n", exec);
 	printf("\t %s <device> <prog name> --detach\n", exec);
 }
+
+int main(int argc, char **argv)
+{
+	char path[256];
+
+	if (argc != 4) {
+		usage(argv[0]);
+		return 1;
+	}
+
+	strcpy(path, "/sys/fs/bpf/");
+	strcat(path, argv[2]);
+
+	if (strcmp(argv[3], "--attach") == 0)
+		return attach(argv[1], path);
+	else if (strcmp(argv[3], "--detach") == 0)
+		return detach(argv[1], path);
+
+	fprintf(stderr, "Error: invalid flag, please specify --attach or --detach");
+	return 1;
+}
+

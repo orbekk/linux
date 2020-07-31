@@ -6421,6 +6421,8 @@ static const struct bpf_sec_def section_defs[] = {
 	BPF_EAPROG_SEC("cgroup/setsockopt",	BPF_PROG_TYPE_CGROUP_SOCKOPT,
 						BPF_CGROUP_SETSOCKOPT),
 	BPF_PROG_SEC("struct_ops",		BPF_PROG_TYPE_STRUCT_OPS),
+	BPF_APROG_SEC("io_filter",		BPF_PROG_TYPE_IO_FILTER,
+						BPF_BIO_SUBMIT),
 };
 
 #undef BPF_PROG_SEC_IMPL

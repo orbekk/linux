@@ -158,6 +158,11 @@ static struct sec_name_test tests[] = {
 		{0, BPF_PROG_TYPE_CGROUP_SOCKOPT, BPF_CGROUP_SETSOCKOPT},
 		{0, BPF_CGROUP_SETSOCKOPT},
 	},
+	{
+		"io_filter",
+		{0, BPF_PROG_TYPE_IO_FILTER, BPF_BIO_SUBMIT},
+		{0, BPF_BIO_SUBMIT},
+	},
 };
 
 static void test_prog_type_by_name(const struct sec_name_test *test)

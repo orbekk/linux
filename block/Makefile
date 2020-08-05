@@ -36,6 +36,4 @@ obj-$(CONFIG_BLK_DEBUG_FS)	+= blk-mq-debugfs.o
 obj-$(CONFIG_BLK_DEBUG_FS_ZONED)+= blk-mq-debugfs-zoned.o
 obj-$(CONFIG_BLK_SED_OPAL)	+= sed-opal.o
 obj-$(CONFIG_BLK_PM)		+= blk-pm.o
-ifeq ($(CONFIG_BPF_JIT),y)
-obj-$(CONFIG_BPF_IO_FILTER) += bpf_io_filter.o
-endif
+obj-$(CONFIG_BPF_IO_FILTER)	+= blk-bpf-io-filter.o

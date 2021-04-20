@@ -123,6 +123,7 @@ static void part_stat_read_all(struct block_device *part,
 			stat->sectors[group] += ptr->sectors[group];
 			stat->ios[group] += ptr->ios[group];
 			stat->merges[group] += ptr->merges[group];
+			stat->errors[group] += ptr->errors[group];
 		}
 
 		stat->io_ticks += ptr->io_ticks;
@@ -1037,7 +1038,8 @@ ssize_t part_stat_show(struct device *dev,
 		"%8lu %8lu %8llu %8u "
 		"%8u %8u %8u "
 		"%8lu %8lu %8llu %8u "
-		"%8lu %8u"
+		"%8lu %8u "
+		"%8lu %8lu %8lu %8lu"
 		"\n",
 		stat.ios[STAT_READ],
 		stat.merges[STAT_READ],
@@ -1059,7 +1061,11 @@ ssize_t part_stat_show(struct device *dev,
 		(unsigned long long)stat.sectors[STAT_DISCARD],
 		(unsigned int)div_u64(stat.nsecs[STAT_DISCARD], NSEC_PER_MSEC),
 		stat.ios[STAT_FLUSH],
-		(unsigned int)div_u64(stat.nsecs[STAT_FLUSH], NSEC_PER_MSEC));
+		(unsigned int)div_u64(stat.nsecs[STAT_FLUSH], NSEC_PER_MSEC),
+		stat.errors[STAT_READ],
+		stat.errors[STAT_WRITE],
+		stat.errors[STAT_DISCARD],
+		stat.errors[STAT_FLUSH]);
 }
 
 ssize_t part_inflight_show(struct device *dev, struct device_attribute *attr,

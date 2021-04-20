@@ -1961,11 +1961,23 @@ static inline void blk_wake_io_task(struct task_struct *waiter)
 unsigned long disk_start_io_acct(struct gendisk *disk, unsigned int sectors,
 		unsigned int op);
 void disk_end_io_acct(struct gendisk *disk, unsigned int op,
-		unsigned long start_time);
+		unsigned long start_time, blk_status_t error);
 
 unsigned long bio_start_io_acct(struct bio *bio);
 void bio_end_io_acct_remapped(struct bio *bio, unsigned long start_time,
-		struct block_device *orig_bdev);
+		struct block_device *orig_bdev, blk_status_t error);
+
+/**
+ * bio_end_io_acct - end I/O accounting for bio based drivers
+ * @bio:	bio to end account for
+ * @start:	start time returned by bio_start_io_acct()
+ * @error:  block error status value
+ */
+static inline void bio_end_io_acct_status(struct bio *bio,
+		unsigned long start_time, blk_status_t error)
+{
+		return bio_end_io_acct_remapped(bio, start_time, bio->bi_bdev, error);
+}
 
 /**
  * bio_end_io_acct - end I/O accounting for bio based drivers
@@ -1974,7 +1986,8 @@ void bio_end_io_acct_remapped(struct bio *bio, unsigned long start_time,
  */
 static inline void bio_end_io_acct(struct bio *bio, unsigned long start_time)
 {
-	return bio_end_io_acct_remapped(bio, start_time, bio->bi_bdev);
+		return bio_end_io_acct_remapped(bio, start_time, bio->bi_bdev,
+										bio->bi_status);
 }
 
 int bdev_read_only(struct block_device *bdev);

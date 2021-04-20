@@ -1276,7 +1276,7 @@ static void blk_account_io_completion(struct request *req, unsigned int bytes)
 	}
 }
 
-void blk_account_io_done(struct request *req, u64 now)
+void blk_account_io_done(struct request *req, u64 now, blk_status_t error)
 {
 	/*
 	 * Account IO completion.  flush_rq isn't accounted as a
@@ -1289,6 +1289,8 @@ void blk_account_io_done(struct request *req, u64 now)
 
 		part_stat_lock();
 		update_io_ticks(req->part, jiffies, true);
+		if (error)
+			part_stat_inc(req->part, errors[sgrp]);
 		part_stat_inc(req->part, ios[sgrp]);
 		part_stat_add(req->part, nsecs[sgrp], now - req->start_time_ns);
 		part_stat_unlock();
@@ -1347,13 +1349,15 @@ unsigned long disk_start_io_acct(struct gendisk *disk, unsigned int sectors,
 EXPORT_SYMBOL(disk_start_io_acct);
 
 static void __part_end_io_acct(struct block_device *part, unsigned int op,
-			       unsigned long start_time)
+			       unsigned long start_time, blk_status_t error)
 {
 	const int sgrp = op_stat_group(op);
 	unsigned long now = READ_ONCE(jiffies);
 	unsigned long duration = now - start_time;
 
 	part_stat_lock();
+	if (error)
+		part_stat_inc(part, errors[sgrp]);
 	update_io_ticks(part, now, true);
 	part_stat_add(part, nsecs[sgrp], jiffies_to_nsecs(duration));
 	part_stat_local_dec(part, in_flight[op_is_write(op)]);
@@ -1361,16 +1365,16 @@ static void __part_end_io_acct(struct block_device *part, unsigned int op,
 }
 
 void bio_end_io_acct_remapped(struct bio *bio, unsigned long start_time,
-		struct block_device *orig_bdev)
+		struct block_device *orig_bdev, blk_status_t error)
 {
-	__part_end_io_acct(orig_bdev, bio_op(bio), start_time);
+	__part_end_io_acct(orig_bdev, bio_op(bio), start_time, error);
 }
 EXPORT_SYMBOL_GPL(bio_end_io_acct_remapped);
 
 void disk_end_io_acct(struct gendisk *disk, unsigned int op,
-		      unsigned long start_time)
+		      unsigned long start_time, blk_status_t error)
 {
-	__part_end_io_acct(disk->part0, op, start_time);
+	__part_end_io_acct(disk->part0, op, start_time, error);
 }
 EXPORT_SYMBOL(disk_end_io_acct);
 

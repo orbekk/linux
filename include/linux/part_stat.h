@@ -11,6 +11,7 @@ struct disk_stats {
 	unsigned long merges[NR_STAT_GROUPS];
 	unsigned long io_ticks;
 	local_t in_flight[2];
+	unsigned long errors[NR_STAT_GROUPS];
 };
 
 /*

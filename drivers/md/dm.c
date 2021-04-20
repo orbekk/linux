@@ -620,8 +620,12 @@ static void end_io_acct(struct dm_io *io)
 	struct mapped_device *md = io->md;
 	struct bio *bio = io->orig_bio;
 	unsigned long duration = jiffies - io->start_time;
+	blk_status_t io_status = io->status;
 
-	bio_end_io_acct(bio, io->start_time);
+	if (io->status == BLK_STS_DM_REQUEUE)
+		io_status = BLK_STS_OK;
+
+	bio_end_io_acct_status(bio, io->start_time, io_status);
 
 	if (unlikely(dm_stats_used(&md->stats)))
 		dm_stats_account_io(&md->stats, bio_data_dir(bio),

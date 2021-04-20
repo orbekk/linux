@@ -548,7 +548,7 @@ inline void __blk_mq_end_request(struct request *rq, blk_status_t error)
 
 	blk_mq_sched_completed_request(rq, now);
 
-	blk_account_io_done(rq, now);
+	blk_account_io_done(rq, now, error);
 
 	if (rq->end_io) {
 		rq_qos_done(rq->q, rq);

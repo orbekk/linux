@@ -937,6 +937,9 @@ static void dec_pending(struct dm_io *io, blk_status_t error)
 
 		io_error = io->status;
 		bio = io->orig_bio;
+		// QQQ: Need to pass the error properly without changing the preflush path below.
+		printk(KERN_WARNING "QQQ end_io in dm. has error? %u", io_error);
+		bio->bi_status = io_error;
 		end_io_acct(io);
 		free_io(md, io);
 

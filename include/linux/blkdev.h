@@ -1961,7 +1961,7 @@ static inline void blk_wake_io_task(struct task_struct *waiter)
 unsigned long disk_start_io_acct(struct gendisk *disk, unsigned int sectors,
 		unsigned int op);
 void disk_end_io_acct(struct gendisk *disk, unsigned int op,
-		unsigned long start_time);
+		      unsigned long start_time, blk_status_t error);
 
 unsigned long bio_start_io_acct(struct bio *bio);
 void bio_end_io_acct_remapped(struct bio *bio, unsigned long start_time,

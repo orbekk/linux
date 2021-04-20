@@ -182,7 +182,7 @@ bool blk_bio_list_merge(struct request_queue *q, struct list_head *list,
 			struct bio *bio, unsigned int nr_segs);
 
 void blk_account_io_start(struct request *req);
-void blk_account_io_done(struct request *req, u64 now);
+void blk_account_io_done(struct request *req, u64 now, blk_status_t error);
 
 /*
  * Internal elevator interface
